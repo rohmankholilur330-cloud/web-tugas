@@ -1,106 +1,198 @@
 <!doctype html>
-const toast = document.createElement('div');
-toast.className = 'toast align-items-center text-bg-'+(type==='success'?'success':'secondary')+' border-0 show';
-toast.setAttribute('role','alert');
-toast.setAttribute('aria-live','assertive');
-toast.style.position = 'fixed';
-toast.style.right = '16px';
-toast.style.bottom = '86px';
-toast.style.zIndex = 2000;
-toast.innerHTML = `<div class="d-flex">
-<div class="toast-body">${msg}</div>
-<button type="button" class="btn-close btn-close-white me-2 m-auto" onclick="this.parentElement.parentElement.remove()"></button>
-</div>`;
-document.body.appendChild(toast);
-setTimeout(()=>{ try{ toast.remove(); }catch(e){} }, 3000);
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Aplikasi Pesanan Online</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { padding-bottom: 80px; }
+    .product-card img { height: 150px; object-fit: cover; }
+    #open-cart { position: fixed; right: 20px; bottom: 20px; z-index: 1050; }
+  </style>
+</head>
+<body>
+<nav class="navbar navbar-dark bg-dark mb-4">
+  <div class="container-fluid">
+    <span class="navbar-brand mb-0 h1">Toko Online Sederhana</span>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="row" id="product-list"></div>
+
+  <hr>
+  <h4>Keranjang Belanja</h4>
+  <div id="cart-list"></div>
+  <button class="btn btn-primary mt-3" id="btn-checkout" data-bs-toggle="modal" data-bs-target="#checkoutModal">Checkout</button>
+</div>
+
+<!-- Modal Checkout -->
+<div class="modal fade" id="checkoutModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Checkout</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div id="order-summary"></div>
+        <form id="checkout-form" class="mt-3">
+          <div class="mb-2">
+            <label class="form-label">Nama</label>
+            <input type="text" id="buyer-name" class="form-control" required>
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Alamat</label>
+            <textarea id="buyer-address" class="form-control" required></textarea>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Metode Pembayaran</label>
+            <select id="payment-method" class="form-select">
+              <option value="Transfer Bank">Transfer Bank</option>
+              <option value="COD">COD</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-success">Selesaikan Pesanan</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tombol Buka Keranjang -->
+<button class="btn btn-danger rounded-circle" id="open-cart">🛒</button>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+const PRODUCTS = [
+  { id: 'p1', title: 'Kopi Arabica', price: 25000, img: 'https://picsum.photos/200?coffee' },
+  { id: 'p2', title: 'Teh Hijau', price: 18000, img: 'https://picsum.photos/200?tea' },
+  { id: 'p3', title: 'Coklat Bubuk', price: 30000, img: 'https://picsum.photos/200?cocoa' }
+];
+
+let cart = JSON.parse(localStorage.getItem('cart_v1') || '{}');
+
+function saveCart() { localStorage.setItem('cart_v1', JSON.stringify(cart)); }
+function formatRp(num){ return 'Rp ' + num.toLocaleString('id-ID'); }
+
+function renderProducts() {
+  const container = document.getElementById('product-list');
+  container.innerHTML = PRODUCTS.map(p => `
+  <div class='col-md-4 mb-3'>
+    <div class='card product-card'>
+      <img src='${p.img}' class='card-img-top'>
+      <div class='card-body'>
+        <h5>${p.title}</h5>
+        <p>${formatRp(p.price)}</p>
+        <button class='btn btn-sm btn-primary' onclick='addToCart("${p.id}")'>Tambah</button>
+      </div>
+    </div>
+  </div>`).join('');
 }
 
+function addToCart(id){
+  cart[id] = (cart[id] || 0) + 1;
+  saveCart();
+  renderCart();
+  showToast('Produk ditambahkan ke keranjang', 'success');
+}
 
-// Checkout handling
+function renderCart(){
+  const container = document.getElementById('cart-list');
+  const keys = Object.keys(cart);
+  if (keys.length === 0) { container.innerHTML = '<p class="text-muted">Keranjang kosong.</p>'; return; }
+  let html = '<ul class="list-group">';
+  let total = 0;
+  keys.forEach(pid => {
+    const p = PRODUCTS.find(x => x.id === pid);
+    const qty = cart[pid];
+    total += qty * p.price;
+    html += `<li class='list-group-item d-flex justify-content-between align-items-center'>
+      ${p.title} × ${qty}
+      <span>${formatRp(qty*p.price)}</span>
+    </li>`;
+  });
+  html += `<li class='list-group-item fw-bold d-flex justify-content-between'><span>Total</span><span>${formatRp(total)}</span></li>`;
+  container.innerHTML = html + '</ul>';
+}
+
+function showToast(msg, type='info'){
+  const toast = document.createElement('div');
+  toast.className = 'toast align-items-center text-bg-'+(type==='success'?'success':'secondary')+' border-0 show';
+  toast.setAttribute('role','alert');
+  toast.style.position = 'fixed';
+  toast.style.right = '16px';
+  toast.style.bottom = '86px';
+  toast.style.zIndex = 2000;
+  toast.innerHTML = `<div class='d-flex'><div class='toast-body'>${msg}</div><button type='button' class='btn-close btn-close-white me-2 m-auto' onclick='this.parentElement.parentElement.remove()'></button></div>`;
+  document.body.appendChild(toast);
+  setTimeout(()=> toast.remove(), 3000);
+}
+
 function renderOrderSummary() {
-const container = document.getElementById('order-summary');
-container.innerHTML = '';
-const keys = Object.keys(cart);
-if (keys.length === 0) { container.innerHTML = '<p class="text-muted">Keranjang kosong.</p>'; return; }
-const table = document.createElement('table');
-table.className = 'table table-sm';
-let rows = '';
-let total = 0;
-keys.forEach(pid => {
-const p = PRODUCTS.find(x=>x.id===pid);
-const qty = cart[pid];
-total += qty * p.price;
-rows += `<tr><td>${p.title} × ${qty}</td><td class="text-end">${formatRp(qty*p.price)}</td></tr>`;
-});
-rows += `<tr class="fw-bold"><td>Total</td><td class="text-end">${formatRp(total)}</td></tr>`;
-table.innerHTML = `<tbody>${rows}</tbody>`;
-container.appendChild(table);
+  const container = document.getElementById('order-summary');
+  container.innerHTML = '';
+  const keys = Object.keys(cart);
+  if (keys.length === 0) { container.innerHTML = '<p class="text-muted">Keranjang kosong.</p>'; return; }
+  let rows = '';
+  let total = 0;
+  keys.forEach(pid => {
+    const p = PRODUCTS.find(x=>x.id===pid);
+    const qty = cart[pid];
+    total += qty * p.price;
+    rows += `<tr><td>${p.title} × ${qty}</td><td class='text-end'>${formatRp(qty*p.price)}</td></tr>`;
+  });
+  rows += `<tr class='fw-bold'><td>Total</td><td class='text-end'>${formatRp(total)}</td></tr>`;
+  container.innerHTML = `<table class='table table-sm'><tbody>${rows}</tbody></table>`;
 }
 
+document.getElementById('btn-checkout').addEventListener('click', renderOrderSummary);
 
-document.getElementById('btn-checkout').addEventListener('click', ()=>{ renderOrderSummary(); });
+document.getElementById('checkout-form').addEventListener('submit', e => {
+  e.preventDefault();
+  const name = document.getElementById('buyer-name').value.trim();
+  const address = document.getElementById('buyer-address').value.trim();
+  const payment = document.getElementById('payment-method').value;
+  if (!name || !address) return alert('Nama dan alamat harus diisi');
 
+  const order = {
+    id: 'ORD-'+Date.now(),
+    buyer: { name, address, payment },
+    items: Object.keys(cart).map(pid=>{
+      const p = PRODUCTS.find(x=>x.id===pid);
+      return { id: pid, title: p.title, price: p.price, qty: cart[pid] };
+    }),
+    total: Object.keys(cart).reduce((sum, pid)=> sum + cart[pid]*PRODUCTS.find(x=>x.id===pid).price, 0),
+    created_at: new Date().toISOString()
+  };
 
-document.getElementById('checkout-form').addEventListener('submit', function(e){
-e.preventDefault();
-const name = document.getElementById('buyer-name').value.trim();
-const address = document.getElementById('buyer-address').value.trim();
-const payment = document.getElementById('payment-method').value;
-if (!name || !address) { alert('Nama dan alamat harus diisi'); return; }
-const order = {
-id: 'ORD-'+Date.now(),
-buyer: { name, address, payment },
-items: Object.keys(cart).map(pid=>{
-const p = PRODUCTS.find(x=>x.id===pid);
-return { id: pid, title: p.title, price: p.price, qty: cart[pid] };
-}),
-total: Object.keys(cart).reduce((sum, pid)=> sum + cart[pid]*PRODUCTS.find(x=>x.id===pid).price, 0),
-created_at: new Date().toISOString()
-};
-// save order locally (demo). In real app send to backend.
-const orders = JSON.parse(localStorage.getItem('orders_v1') || '[]');
-orders.push(order);
-localStorage.setItem('orders_v1', JSON.stringify(orders));
+  const orders = JSON.parse(localStorage.getItem('orders_v1') || '[]');
+  orders.push(order);
+  localStorage.setItem('orders_v1', JSON.stringify(orders));
 
+  cart = {}; saveCart(); renderCart();
+  showToast('Pesanan berhasil disimpan. Terima kasih!', 'success');
 
-// clear cart
-cart = {};
-saveCart();
-renderCart();
+  const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(order, null, 2));
+  const a = document.createElement('a');
+  a.href = dataStr; a.download = order.id + '.json';
+  a.className = 'btn btn-sm btn-outline-primary mt-2';
+  a.innerText = 'Download Receipt (JSON)';
+  document.querySelector('#checkoutModal .modal-body').appendChild(a);
 
-
-// show success and provide download
-showToast('Pesanan berhasil disimpan. Terima kasih!', 'success');
-const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(order, null, 2));
-const a = document.createElement('a');
-a.href = dataStr;
-a.download = order.id + '.json';
-a.className = 'btn btn-sm btn-outline-primary mt-2';
-a.innerText = 'Download Receipt (JSON)';
-const modalBody = document.querySelector('#checkoutModal .modal-body');
-modalBody.appendChild(a);
-var bsModal = bootstrap.Modal.getInstance(document.getElementById('checkoutModal'));
-setTimeout(()=>{ bsModal.hide(); }, 800);
+  setTimeout(()=> bootstrap.Modal.getInstance(document.getElementById('checkoutModal')).hide(), 800);
 });
 
-
-// sticky cart button opens modal scroll to cart area
 document.getElementById('open-cart').addEventListener('click', ()=>{
-window.scrollTo({ top: 0, behavior: 'smooth' });
-const el = document.querySelector('.navbar');
-// flash cart area
-document.getElementById('cart-list').classList.add('border','border-primary');
-setTimeout(()=>{ document.getElementById('cart-list').classList.remove('border','border-primary') }, 800);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  const el = document.getElementById('cart-list');
+  el.classList.add('border','border-primary');
+  setTimeout(()=> el.classList.remove('border','border-primary'), 800);
 });
 
-
-// initialize
 renderProducts();
 renderCart();
-
-
-// expose for debugging
-window._app = { PRODUCTS, cart };
 </script>
 </body>
 </html>
