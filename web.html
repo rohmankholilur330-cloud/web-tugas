@@ -1,0 +1,106 @@
+<!doctype html>
+const toast = document.createElement('div');
+toast.className = 'toast align-items-center text-bg-'+(type==='success'?'success':'secondary')+' border-0 show';
+toast.setAttribute('role','alert');
+toast.setAttribute('aria-live','assertive');
+toast.style.position = 'fixed';
+toast.style.right = '16px';
+toast.style.bottom = '86px';
+toast.style.zIndex = 2000;
+toast.innerHTML = `<div class="d-flex">
+<div class="toast-body">${msg}</div>
+<button type="button" class="btn-close btn-close-white me-2 m-auto" onclick="this.parentElement.parentElement.remove()"></button>
+</div>`;
+document.body.appendChild(toast);
+setTimeout(()=>{ try{ toast.remove(); }catch(e){} }, 3000);
+}
+
+
+// Checkout handling
+function renderOrderSummary() {
+const container = document.getElementById('order-summary');
+container.innerHTML = '';
+const keys = Object.keys(cart);
+if (keys.length === 0) { container.innerHTML = '<p class="text-muted">Keranjang kosong.</p>'; return; }
+const table = document.createElement('table');
+table.className = 'table table-sm';
+let rows = '';
+let total = 0;
+keys.forEach(pid => {
+const p = PRODUCTS.find(x=>x.id===pid);
+const qty = cart[pid];
+total += qty * p.price;
+rows += `<tr><td>${p.title} × ${qty}</td><td class="text-end">${formatRp(qty*p.price)}</td></tr>`;
+});
+rows += `<tr class="fw-bold"><td>Total</td><td class="text-end">${formatRp(total)}</td></tr>`;
+table.innerHTML = `<tbody>${rows}</tbody>`;
+container.appendChild(table);
+}
+
+
+document.getElementById('btn-checkout').addEventListener('click', ()=>{ renderOrderSummary(); });
+
+
+document.getElementById('checkout-form').addEventListener('submit', function(e){
+e.preventDefault();
+const name = document.getElementById('buyer-name').value.trim();
+const address = document.getElementById('buyer-address').value.trim();
+const payment = document.getElementById('payment-method').value;
+if (!name || !address) { alert('Nama dan alamat harus diisi'); return; }
+const order = {
+id: 'ORD-'+Date.now(),
+buyer: { name, address, payment },
+items: Object.keys(cart).map(pid=>{
+const p = PRODUCTS.find(x=>x.id===pid);
+return { id: pid, title: p.title, price: p.price, qty: cart[pid] };
+}),
+total: Object.keys(cart).reduce((sum, pid)=> sum + cart[pid]*PRODUCTS.find(x=>x.id===pid).price, 0),
+created_at: new Date().toISOString()
+};
+// save order locally (demo). In real app send to backend.
+const orders = JSON.parse(localStorage.getItem('orders_v1') || '[]');
+orders.push(order);
+localStorage.setItem('orders_v1', JSON.stringify(orders));
+
+
+// clear cart
+cart = {};
+saveCart();
+renderCart();
+
+
+// show success and provide download
+showToast('Pesanan berhasil disimpan. Terima kasih!', 'success');
+const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(order, null, 2));
+const a = document.createElement('a');
+a.href = dataStr;
+a.download = order.id + '.json';
+a.className = 'btn btn-sm btn-outline-primary mt-2';
+a.innerText = 'Download Receipt (JSON)';
+const modalBody = document.querySelector('#checkoutModal .modal-body');
+modalBody.appendChild(a);
+var bsModal = bootstrap.Modal.getInstance(document.getElementById('checkoutModal'));
+setTimeout(()=>{ bsModal.hide(); }, 800);
+});
+
+
+// sticky cart button opens modal scroll to cart area
+document.getElementById('open-cart').addEventListener('click', ()=>{
+window.scrollTo({ top: 0, behavior: 'smooth' });
+const el = document.querySelector('.navbar');
+// flash cart area
+document.getElementById('cart-list').classList.add('border','border-primary');
+setTimeout(()=>{ document.getElementById('cart-list').classList.remove('border','border-primary') }, 800);
+});
+
+
+// initialize
+renderProducts();
+renderCart();
+
+
+// expose for debugging
+window._app = { PRODUCTS, cart };
+</script>
+</body>
+</html>
